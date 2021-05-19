@@ -2,17 +2,45 @@ import os
 
 from werkzeug.wrappers import Request, Response
 from werkzeug.middleware.shared_data import SharedDataMiddleware
+from jinja2 import Environment, FileSystemLoader
+from werkzeug.routing import Rule, Map
+from werkzeug.exceptions import HTTPException
 
 
 class BlogApp(object):
     """Implements a WSGI application for managing your posts."""
 
     def __init__(self):
-        pass
+        """Initializes the Jinja templating engine to render from the 'templates' folder."""
+        template_path = os.path.join(os.path.dirname(__file__), 'templates')
+        self.jinja_env = Environment(loader=FileSystemLoader(template_path),
+                                     autoescape=True)
+
+        self.url_map = Map([
+            Rule('/', endpoint='index'),
+            Rule('/register', endpoint='register'),
+        ])
+
+    def render_template(self, template_name, **context):
+        """Renders the specified template file using the Jinja templating engine."""
+        template = self.jinja_env.get_template(template_name)
+        return Response(template.render(context), mimetype='text/html')
+
+    def index(self, request):
+        return self.render_template('base.html')
+
+    def register(self, request):
+        return self.render_template('register.html')
 
     def dispatch_request(self, request):
         """Dispatches the request."""
-        return Response('Hello World!')
+        adapter = self.url_map.bind_to_environ(request.environ)
+        try:
+            endpoint, values = adapter.match()
+            return getattr(self, endpoint)(request, **values)
+        except HTTPException as e:
+            return e
+
 
     def wsgi_app(self, environ, start_response):
         """WSGI application that processes requests and returns responses."""
