@@ -1,7 +1,10 @@
+import os
+
 from werkzeug.wrappers import Request, Response
+from werkzeug.middleware.shared_data import SharedDataMiddleware
 
 
-class App(object):
+class BlogApp(object):
     """Implements a WSGI application for managing your posts."""
 
     def __init__(self):
@@ -23,8 +26,11 @@ class App(object):
 
 
 def create_app():
-    """Application factory function that returns an instance of an App."""
-    app = App()
+    """Application factory function that returns an instance of an BlogApp."""
+    app = BlogApp()
+    app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
+        '/static': os.path.join(os.path.dirname(__file__), 'static')
+    })
     return app
 
 
